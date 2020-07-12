@@ -1,6 +1,12 @@
 # Http
 
-**Android网络请求框架，使用kotlin语言封装，api21以上，支持get、post，文件上传。**
+Android网络请求框架，使用kotlin语言封装，api21以上，支持get、post，文件上传。
+
+### 集成
+添加依赖
+```gradle
+implementation 'com.dingjianlun:http:0.0.1'
+```
 
 ### GET
 ```kotlin
