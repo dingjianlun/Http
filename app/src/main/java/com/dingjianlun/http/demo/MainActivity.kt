@@ -7,6 +7,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.dingjianlun.http.defaultClient
 import com.dingjianlun.http.get
+import com.dingjianlun.http.gson.GsonConverter
 import com.dingjianlun.http.post
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.*
@@ -17,6 +18,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope() {
 
     init {
         defaultClient.host = "http://81.68.101.110/"
+        defaultClient.convert = GsonConverter()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -72,6 +74,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope() {
                         showResult(string)
                     } catch (e: CancellationException) {
                     } catch (e: Exception) {
+                        e.printStackTrace()
                         showResult(e.message)
                     } finally {
                         dismiss()

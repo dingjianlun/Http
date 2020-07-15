@@ -1,6 +1,6 @@
 package com.dingjianlun.http
 
-import com.google.gson.Gson
+import com.dingjianlun.http.gson.GsonConverter
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -31,10 +31,7 @@ suspend inline fun <reified T> post(
 
 class HttpClient(
     var host: String = "",
-//    var  convert :(type: Type, string: String)->T
-    var convert: Converter = object : Converter() {
-        override fun <T> convert(type: Type, string: String) = Gson().fromJson<T>(string, type)
-    }
+    var convert: Converter = GsonConverter()
 ) {
 
     private val client = OkHttpClient()
@@ -159,7 +156,3 @@ interface IFileParam : IParam {
 sealed class Item
 class FormItem(val name: String, val value: String?) : Item()
 class FileItem(val name: String, val file: File?) : Item()
-
-abstract class Converter {
-    abstract fun <T> convert(type: Type, string: String): T
-}
