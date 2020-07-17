@@ -5,10 +5,8 @@ import android.view.View
 import android.widget.ProgressBar
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import com.dingjianlun.http.defaultClient
-import com.dingjianlun.http.get
+import com.dingjianlun.http.*
 import com.dingjianlun.http.gson.GsonConverter
-import com.dingjianlun.http.post
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.*
 import java.io.File
@@ -18,7 +16,15 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope() {
 
     init {
         defaultClient.host = "http://81.68.101.110/"
+
         defaultClient.convert = GsonConverter()
+
+        defaultClient.interceptorList += Interceptor { chain ->
+            val request = chain.request()
+            request.addParam("token", "abcdefg")
+            chain.proceed(request)
+        }
+        defaultClient.interceptorList += LogInterceptor()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -27,7 +33,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope() {
 
         btn_get.onClickLoading {
             get<BaseData<User>>("getUser") {
-                addParam("id", 1)
+                addParam("id", 1.toString())
             }.await().toString()
         }
 
