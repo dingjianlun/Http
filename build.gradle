@@ -21,7 +21,6 @@ allprojects {
     repositories {
         google()
         jcenter()
-//        maven { url 'https://dl.bintray.com/dingjianlun/release' }
     }
     tasks.withType(Javadoc).all { enabled = false }
     configurations.all {

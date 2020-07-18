@@ -1,6 +1,5 @@
 package com.dingjianlun.http
 
-import com.dingjianlun.http.gson.GsonConverter
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -26,11 +25,9 @@ suspend inline fun <reified T> post(
 
 class HttpClient(
     var host: String = defaultClient.host,
-    var convert: Converter = defaultClient.convert,
-    val interceptorList: ArrayList<Interceptor> = defaultClient.interceptorList
+    var converter: Converter = defaultClient.converter,
+    val interceptorList: ArrayList<Interceptor> = ArrayList(defaultClient.interceptorList)
 ) {
-
-    private val client = OkHttpClient()
 
     suspend fun <T> request(
         path: String,
@@ -46,25 +43,27 @@ class HttpClient(
         async(Dispatchers.IO) {
             val interceptors = arrayListOf<Interceptor>()
             interceptors.addAll(interceptorList)
-            interceptors.add(getRequestInterceptor())
+            interceptors.add(requestInterceptor)
 
             val chain = getChain(request, interceptors, 0)
             val string = chain.proceed(request)
-            string.let { convert.convert<T>(type, it) }
+            string.let { converter.convert<T>(type, it) }
         }
     }
 
-    private fun getRequestInterceptor() = object : Interceptor {
-        override fun intercept(chain: Interceptor.Chain): String {
-            val request = chain.request()
-            return client
-                .newCall(request.toRequest())
-                .execute()
-                .use { response ->
-                    if (response.isSuccessful) response.body!!.string()
-                    else throw Exception("${response.code}: ${response.message}")
-                }
-        }
+    private val requestInterceptor: Interceptor = object : Interceptor {
+
+        private val client = OkHttpClient()
+
+        override fun intercept(chain: Interceptor.Chain) = client
+            .newCall(
+                chain.request().toRequest()
+            )
+            .execute()
+            .use { response ->
+                if (response.isSuccessful) response.body!!.string()
+                else throw Exception("${response.code}: ${response.message}")
+            }
     }
 
     private fun getChain(
