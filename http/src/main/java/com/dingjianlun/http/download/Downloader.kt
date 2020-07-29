@@ -28,6 +28,7 @@ class Downloader(
                 download(url, file)
             } catch (e: Exception) {
                 downloadListener.exception(e)
+                state = State.Pause
             }
         }
     }
