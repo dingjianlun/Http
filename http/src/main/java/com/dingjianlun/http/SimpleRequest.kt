@@ -4,6 +4,7 @@ import okhttp3.*
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.internal.http.HttpMethod
 import java.io.File
 import java.net.URLConnection
 
@@ -13,39 +14,51 @@ class SimpleRequest {
 
     internal var method: Method = Method.GET
 
-    internal val paramList = ArrayList<Item>()
+    internal val paramList = ArrayList<Param>()
 
-    fun addParam(name: String, value: String?) {
-        paramList.add(FormItem(name, value))
+    fun addQuery(name: String, value: String?) {
+        paramList.add(QueryParam(name, value))
     }
 
-    fun addParam(name: String, value: Number?) = addParam(name, value?.toString())
+    fun addQuery(name: String, value: Number?) = addQuery(name, value?.toString())
+    fun addQuery(name: String, value: Boolean?) = addQuery(name, value?.toString())
 
-    fun addParam(name: String, value: Boolean?) = addParam(name, value?.toString())
+    fun getQuery(name: String): List<QueryParam> =
+        paramList.filterIsInstance<QueryParam>().filter { it.name == name }
 
-    fun addParam(name: String, value: File?) {
-        paramList.add(FileItem(name, value))
+    fun addForm(name: String, value: String?) {
+        paramList.add(FormParam(name, value))
     }
+
+    fun addForm(name: String, value: Number?) = addForm(name, value?.toString())
+    fun addForm(name: String, value: Boolean?) = addForm(name, value?.toString())
+    fun addForm(name: String, value: File?) {
+        paramList.add(FormParam(name, value))
+    }
+
+    fun getForm(name: String): List<FormParam> =
+        paramList.filterIsInstance<FormParam>().filter { it.name == name }
 
     internal fun toRequest(): Request {
-        val httpUrl: HttpUrl = when (method) {
-            Method.GET, Method.HEAD, Method.DELETE ->
-                url.toHttpUrl()
-                    .newBuilder()
-                    .addParameter(paramList)
-                    .build()
-            else -> url.toHttpUrl()
-        }
+        val httpUrl: HttpUrl = url.toHttpUrl()
+            .newBuilder()
+            .addRequestParam(paramList)
+            .build()
 
-        val requestBody: RequestBody? = when (method) {
-            Method.POST, Method.PUT, Method.PATCH, Method.DELETE ->
-                if (paramList.any { it is FileItem }) MultipartBody.Builder()
-                    .addParameter(paramList)
+        val requestBody: RequestBody? = if (HttpMethod.requiresRequestBody(method.name)) {
+            if (paramList.any { it is FormParam && it.file != null }) {
+                MultipartBody
+                    .Builder()
+                    .addRequestParam(paramList)
                     .build()
-                else FormBody.Builder()
-                    .addParameter(paramList)
+            } else {
+                FormBody
+                    .Builder()
+                    .addRequestParam(paramList)
                     .build()
-            else -> null
+            }
+        } else {
+            null
         }
 
         return Request.Builder()
@@ -54,38 +67,35 @@ class SimpleRequest {
             .build()
     }
 
-    private fun HttpUrl.Builder.addParameter(paramList: ArrayList<Item>) = apply {
-        paramList.filterIsInstance<FormItem>()
-            .forEach {
-                addEncodedQueryParameter(it.name, it.value)
-            }
-    }
-
-    private fun FormBody.Builder.addParameter(paramList: ArrayList<Item>) = apply {
-        paramList.filterIsInstance<FormItem>()
+    private fun FormBody.Builder.addRequestParam(paramList: List<Param>) = apply {
+        paramList.filterIsInstance<FormParam>()
             .forEach {
                 it.value?.let { value -> add(it.name, value) }
             }
     }
 
-    private fun MultipartBody.Builder.addParameter(paramList: ArrayList<Item>) = apply {
-        paramList.forEach {
-            when (it) {
-                is FormItem -> it.value?.let { value ->
-                    addFormDataPart(it.name, value)
-                }
-                is FileItem -> it.getRequestBody()?.let { requestBody ->
-                    addFormDataPart(it.name, it.file?.name, requestBody)
-                }
+    private fun HttpUrl.Builder.addRequestParam(paramList: List<Param>) = apply {
+        paramList.filterIsInstance<QueryParam>()
+            .forEach {
+                addEncodedQueryParameter(it.name, it.value)
+            }
+    }
+
+    private fun MultipartBody.Builder.addRequestParam(paramList: List<Param>) = apply {
+        paramList.filterIsInstance<FormParam>().forEach {
+            if (it.value != null) {
+                addFormDataPart(it.name, it.value)
+            } else if (it.file != null) {
+                val fileName = it.file.name
+                val body = it.file.asRequestBody(getMediaType(fileName))
+                addFormDataPart(it.name, fileName, body)
             }
         }
     }
 
-    private fun FileItem.getRequestBody() =
-        file?.asRequestBody(getMediaType(file.name).toMediaTypeOrNull())
-
     private fun getMediaType(filename: String?) =
-        URLConnection.getFileNameMap().getContentTypeFor(filename)
-            ?: "application/octet-stream"
+        (URLConnection.getFileNameMap().getContentTypeFor(filename)
+            ?: "application/octet-stream")
+            .toMediaTypeOrNull()
 
 }

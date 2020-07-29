@@ -11,15 +11,15 @@ implementation 'com.dingjianlun:http:0.0.2'
 ### GET
 ```kotlin
 get<Data>("path") {
-  addParam("id", 1)
+  addQuery("id", 1)
 }.await()
 ```
 
 ### POST
 ```kotlin
 post<Data>("path") {
-  addParam("name", name)
-  addParam("file", file) //文件
+  addForm("name", name)
+  addForm("file", file) //文件
 }.await()
 ```
 

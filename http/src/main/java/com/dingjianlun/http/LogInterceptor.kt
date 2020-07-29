@@ -13,8 +13,8 @@ class LogInterceptor(
             logList += "${request.method}: ${request.url}?${
             request.paramList.joinToString("&") { item ->
                 when (item) {
-                    is FormItem -> "${item.name}=${item.value}"
-                    is FileItem -> "${item.name}=${item.file}"
+                    is QueryParam -> "${item.name}=${item.value}"
+                    is FormParam -> "${item.name}=${item.value ?: item.file}"
                 }
             }}"
 

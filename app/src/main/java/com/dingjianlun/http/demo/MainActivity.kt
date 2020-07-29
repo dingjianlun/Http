@@ -1,5 +1,6 @@
 package com.dingjianlun.http.demo
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.widget.ProgressBar
@@ -21,7 +22,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope() {
 
         defaultClient.interceptorList += Interceptor { chain ->
             val request = chain.request()
-            request.addParam("token", "abcdefg")
+            request.addQuery("token", "abcdefg")
             chain.proceed(request)
         }
         defaultClient.interceptorList += LogInterceptor()
@@ -34,7 +35,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope() {
 
         btn_get.onClickLoading {
             get<BaseData<User>>("getUser") {
-                addParam("id", 1)
+                addQuery("id", 1)
             }.await().toString()
         }
 
@@ -45,16 +46,20 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope() {
 
         btn_post.onClickLoading {
             post<BaseData<Any>>("addUser") {
-                addParam("name", ("name${Random.nextInt(100)}"))
+                addForm("name", ("name${Random.nextInt(100)}"))
             }.await().toString()
         }
 
         btn_postUpdate.onClickLoading {
             val file = getImageFile()
             post<BaseData<Any>>("updateAvatar") {
-                addParam("id", 1)
-                addParam("file", file)
+                addForm("id", 1)
+                addForm("file", file)
             }.await().toString()
+        }
+
+        btn_download.setOnClickListener {
+            startActivity(Intent(this, DownloadActivity::class.java))
         }
 
     }
