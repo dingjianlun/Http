@@ -19,23 +19,22 @@ class DownloadActivity : AppCompatActivity() {
         val file = File(getExternalFilesDir(null), "/Download/qq.apk")
         file.delete()
 
-        val downloader = Downloader(url, file, object : Downloader.DownloadListener {
+        val downloader = Downloader(url, file) { state ->
+            when (state) {
 
-            override fun state(state: Downloader.State) {
-                tv_state.post { tv_state.text = state.name }
+                is Downloader.State.Wait -> tv_state.text = "等待"
+
+                is Downloader.State.Download -> tv_state.text =
+                    ("下载中:${state.dlSize.formatFileSize()}/${state.size.formatFileSize()}")
+
+                is Downloader.State.Pause -> tv_state.text = "暂停"
+
+                is Downloader.State.Error -> tv_state.text = ("错误:${state.e.message}")
+
+                is Downloader.State.Finish -> tv_state.text = "完成"
+
             }
-
-            override fun process(dlSize: Long, size: Long) {
-                tv_progress.post {
-                    tv_progress.text = ("${dlSize.formatFileSize()}/${size.formatFileSize()}")
-                }
-            }
-
-            override fun exception(e: Exception) {
-                Toast.makeText(this@DownloadActivity, e.message, Toast.LENGTH_LONG).show()
-            }
-
-        })
+        }
 
         btn_start.setOnClickListener { downloader.start() }
 

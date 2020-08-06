@@ -9,33 +9,35 @@ import java.io.RandomAccessFile
 class Downloader(
     private val url: String,
     private val file: File,
-    private val downloadListener: DownloadListener
+    private val updateState: (state: State) -> Unit
 ) : CoroutineScope by MainScope() {
 
-    private var state = State.Pause
+    private var state: State = State.Pause
         set(value) {
-            if (field != value) {
-                field = value
-                downloadListener.state(value)
-            }
+            field = value
+            launch { updateState.invoke(value) }
         }
 
+    private var job: Job? = null
+
     fun start() {
-        if (state != State.Pause) return
+        if (state is State.Wait || state is State.Download || state is State.Finish) return
+
         state = State.Wait
-        launch {
+
+        job = launch {
             try {
                 download(url, file)
-            } catch (e: Exception) {
-                downloadListener.exception(e)
+            } catch (e: CancellationException) {
                 state = State.Pause
+            } catch (e: Exception) {
+                state = State.Error(e)
             }
         }
     }
 
     fun pause() {
-        if (state == State.Pause) return
-        state = State.Pause
+        job?.cancel()
     }
 
     private suspend fun download(url: String, file: File) = withContext(Dispatchers.IO) {
@@ -70,38 +72,29 @@ class Downloader(
         val randomAccessFile = RandomAccessFile(file, "rwd")
         randomAccessFile.seek(startLength)
 
-        state = State.Download
-
         body.byteStream().use { input ->
-            var bytesCopied: Long = 0
+            var countLength: Long = startLength
             val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
             var bytes = input.read(buffer)
             while (bytes >= 0) {
                 randomAccessFile.write(buffer, 0, bytes)
-                bytesCopied += bytes
+                countLength += bytes
+                state = State.Download(countLength, endLength)
+                if (!isActive) break
                 bytes = input.read(buffer)
-                downloadListener.process(bytesCopied + startLength, endLength)
-                if (state == State.Pause) {
-                    state = State.Pause
-                    break
-                }
             }
-            if (state != State.Pause) {
-                downloadListener.process(bytesCopied + startLength, endLength)
-                state = State.Finish
-            }
+            state = if (countLength == endLength) State.Finish else State.Pause
         }
 
     }
 
-    enum class State {
-        Wait, Download, Pause, Finish
-    }
+    sealed class State {
 
-    interface DownloadListener {
-        fun state(state: State)
-        fun process(dlSize: Long, size: Long)
-        fun exception(e: Exception)
+        object Wait : State()
+        class Download(val dlSize: Long, val size: Long) : State()
+        object Pause : State()
+        class Error(val e: Exception) : State()
+        object Finish : State()
     }
 
 }
