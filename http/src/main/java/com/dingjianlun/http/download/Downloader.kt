@@ -14,6 +14,7 @@ class Downloader(
 
     private var state: State = State.Pause
         set(value) {
+            if (field == value && value !is State.Progress) return
             field = value
             launch { updateState.invoke(value) }
         }
@@ -21,7 +22,7 @@ class Downloader(
     private var job: Job? = null
 
     fun start() {
-        if (state is State.Wait || state is State.Download || state is State.Finish) return
+        if (state is State.Wait || state is State.Start || state is State.Progress || state is State.Finish) return
 
         state = State.Wait
 
@@ -45,6 +46,8 @@ class Downloader(
         file.parentFile?.mkdirs()
 
         val startLength = file.length()
+
+        state = State.Start
 
         val request = Request.Builder()
             .url(url)
@@ -76,11 +79,10 @@ class Downloader(
             var countLength: Long = startLength
             val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
             var bytes = input.read(buffer)
-            while (bytes >= 0) {
+            while (bytes >= 0 && isActive) {
                 randomAccessFile.write(buffer, 0, bytes)
                 countLength += bytes
-                state = State.Download(countLength, endLength)
-                if (!isActive) break
+                state = State.Progress(countLength, endLength)
                 bytes = input.read(buffer)
             }
             state = if (countLength == endLength) State.Finish else State.Pause
@@ -91,7 +93,8 @@ class Downloader(
     sealed class State {
 
         object Wait : State()
-        class Download(val dlSize: Long, val size: Long) : State()
+        object Start : State()
+        class Progress(val dlSize: Long, val size: Long) : State()
         object Pause : State()
         class Error(val e: Exception) : State()
         object Finish : State()

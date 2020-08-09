@@ -5,7 +5,7 @@ Android网络请求框架，基于okhttp，使用kotlin语言封装，api21以�
 ### 集成
 添加依赖
 ```gradle
-implementation 'com.dingjianlun:http:0.0.3'
+implementation 'com.dingjianlun:http:0.0.4'
 ```
 
 ### GET
@@ -58,18 +58,16 @@ client.interceptorList += Interceptor { chain ->
 ### 下载
 下载文件功能支持断点续传
 ```kotlin
-val downloader = Downloader(url, file, object : Downloader.DownloadListener {
-
-    override fun state(state: Downloader.State) {
+val downloader = Downloader(url, file) { state ->
+    when (state) {
+        is Downloader.State.Wait -> {}
+        is Downloader.State.Start -> {}
+        is Downloader.State.Progress -> {}
+        is Downloader.State.Pause -> {}
+        is Downloader.State.Error -> {}
+        is Downloader.State.Finish -> {}
     }
-
-    override fun process(dlSize: Long, size: Long) {
-    }
-
-    override fun exception(e: Exception) {
-    }
-
-})
+}
 
 downloader.start() //开始
 downloader.pause() //暂停

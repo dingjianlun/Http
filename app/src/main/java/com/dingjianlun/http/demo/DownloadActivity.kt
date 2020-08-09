@@ -24,7 +24,9 @@ class DownloadActivity : AppCompatActivity() {
 
                 is Downloader.State.Wait -> tv_state.text = "等待"
 
-                is Downloader.State.Download -> tv_state.text =
+                is Downloader.State.Start -> tv_state.text = "开始"
+
+                is Downloader.State.Progress -> tv_state.text =
                     ("下载中:${state.dlSize.formatFileSize()}/${state.size.formatFileSize()}")
 
                 is Downloader.State.Pause -> tv_state.text = "暂停"
@@ -39,7 +41,6 @@ class DownloadActivity : AppCompatActivity() {
         btn_start.setOnClickListener { downloader.start() }
 
         btn_pause.setOnClickListener { downloader.pause() }
-
 
     }
 

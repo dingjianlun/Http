@@ -1,0 +1,79 @@
+def bintrayConst = [
+        repo      : "release",
+        name      : 'http',
+        groupId   : 'com.dingjianlun',
+        artifactId: 'http',
+        version   : '0.0.4',
+        vcsUrl    : 'https://github.com/dingjianlun/Http',
+        websiteUrl: 'https://github.com/dingjianlun',
+        dryRun    : false,
+        override  : false
+]
+
+
+apply plugin: 'maven-publish'
+apply plugin: 'com.jfrog.bintray'
+apply plugin: 'com.github.dcendents.android-maven'
+
+
+version bintrayConst.version
+group bintrayConst.groupId
+
+
+install {
+    repositories.mavenInstaller {
+        pom.project {
+            name bintrayConst.name
+            packaging 'aar'
+            groupId bintrayConst.groupId
+            artifactId bintrayConst.artifactId
+            version bintrayConst.version
+        }
+    }
+}
+
+task sourcesJar(type: Jar) {
+    archiveClassifier.set('sources')
+    from android.sourceSets.main.java.srcDirs
+}
+
+task javadoc(type: Javadoc) {
+    source = android.sourceSets.main.java.srcDirs
+    classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    archiveClassifier.set('javadoc')
+    from javadoc.destinationDir
+}
+
+artifacts {
+    archives javadocJar
+    archives sourcesJar
+}
+
+bintray {
+    Properties properties = new Properties()
+    InputStream inputStream = project.rootProject.file('local.properties').newDataInputStream();
+    properties.load(inputStream)
+    user = properties.getProperty('bintray.user')
+    key = properties.getProperty('bintray.key')
+    configurations = ['archives']
+    pkg {
+        repo = bintrayConst.repo
+        name = bintrayConst.artifactId
+        publish = true
+        dryRun = bintrayConst.dryRun
+        override = bintrayConst.override
+        userOrg = user
+        licenses = ['Apache-2.0']
+        vcsUrl = bintrayConst.vcsUrl
+        websiteUrl = bintrayConst.websiteUrl
+        version {
+            name = bintrayConst.version
+            desc = bintrayConst.desc
+            vcsTag = bintrayConst.version
+            released = new Date()
+        }
+    }
+}

@@ -21,7 +21,7 @@ allprojects {
     repositories {
         google()
         jcenter()
-        maven { url 'https://dl.bintray.com/bokecc/maven' }
+//        maven { url 'https://dl.bintray.com/bokecc/maven' }
     }
     tasks.withType(Javadoc).all { enabled = false }
     configurations.all {
